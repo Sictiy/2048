@@ -4,7 +4,7 @@ using UnityEngine;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
-
+using UnityEngine.Networking;
 
 public class GoSpline
 {
@@ -17,6 +17,14 @@ public class GoSpline
 
 	private bool _isReversed; // internal flag that lets us know if our nodes are reversed or not
 	private AbstractGoSplineSolver _solver;
+	
+	public float pathLength
+	{
+		get
+		{
+			return _solver.pathLength;
+		}
+	}
 	
 	
 	// default constructor
@@ -59,7 +67,7 @@ public class GoSpline
 	/// </summary>
 	private static List<Vector3> nodeListFromAsset( string pathAssetName )
 	{
-		if( Application.platform == RuntimePlatform.OSXWebPlayer || Application.platform == RuntimePlatform.WindowsWebPlayer )
+		if( Application.platform == RuntimePlatform.WebGLPlayer )
 		{
 			Debug.LogError( "The Web Player does not support loading files from disk." );
 			return null;
@@ -75,10 +83,10 @@ public class GoSpline
 		{
 			path = Path.Combine( "jar:file://" + Application.dataPath + "!/assets/", pathAssetName );
 		
-	        WWW loadAsset = new WWW( path );
-	        while( !loadAsset.isDone ) { } // maybe make a safety check here
+			UnityWebRequest loadAsset = new UnityWebRequest( path );
+			while( !loadAsset.isDone ) { } // maybe make a safety check here
 			
-			return bytesToVector3List( loadAsset.bytes );
+			return bytesToVector3List( loadAsset.downloadHandler.data );
 		}
 		else if( Application.platform == RuntimePlatform.IPhonePlayer )
 		{
@@ -88,10 +96,10 @@ public class GoSpline
 		else
 		{
 			// in the editor we default to looking in the StreamingAssets folder
-			path = Path.Combine( Path.Combine( Application.dataPath, "StreamingAssets" ), pathAssetName );
+			path = Path.Combine( Application.streamingAssetsPath, pathAssetName );
 		}
 		
-#if UNITY_WEBPLAYER || NETFX_CORE
+#if UNITY_WEBPLAYER || NETFX_CORE || UNITY_WP8
 		// it isnt possible to get here but the compiler needs it to be here anyway
 		return null;
 #else

@@ -8,7 +8,7 @@ public enum State
     SwipeStarted
 }
 
-public class SwipeDetector : MonoBehaviour, IInputDetector
+public class SwipeDetector : IInputDetector
 {
 
     private State state = State.SwipeNotStarted;
@@ -19,44 +19,73 @@ public class SwipeDetector : MonoBehaviour, IInputDetector
 
     public InputDirection? DetectInputDirection()
     {
-        if (state == State.SwipeNotStarted)
+#if UNITY_IPHONE || UNITY_ANDROID
+        if (Input.touchCount == 1)
         {
-            if (Input.GetMouseButtonDown(0))
+            var touch = Input.GetTouch(0);
+            if (touch.phase == TouchPhase.Began)
             {
-                timeSwipeStarted = DateTime.Now;
-                state = State.SwipeStarted;
-                startPoint = Input.mousePosition;
-            }
-        }
-        else if (state == State.SwipeStarted)
-        {
-            if (Input.GetMouseButtonUp(0))
-            {
-                TimeSpan timeDifference = DateTime.Now - timeSwipeStarted;
-                if (timeDifference <= maxSwipeDuration && timeDifference >= minSwipeDuration)
+                if (state == State.SwipeNotStarted)
                 {
-                    Vector2 mousePosition = Input.mousePosition;
-                    Vector2 differenceVector = mousePosition - startPoint;
-                    float angle = Vector2.Angle(differenceVector, Vector2.right);
-                    Vector3 cross = Vector3.Cross(differenceVector, Vector2.right);
-
-                    if (cross.z > 0)
-                        angle = 360 - angle;
-
+                    state = State.SwipeStarted;
+                    timeSwipeStarted = DateTime.Now;
+                    startPoint = touch.position;
+                }
+            }
+            else if (touch.phase == TouchPhase.Ended)
+            {
+                if (state == State.SwipeStarted)
+                {
                     state = State.SwipeNotStarted;
-
-                    if ((angle >= 315 && angle < 360) || (angle >= 0 && angle <= 45))
-                        return InputDirection.Right;
-                    else if (angle > 45 && angle <= 135)
-                        return InputDirection.Top;
-                    else if (angle > 135 && angle <= 225)
-                        return InputDirection.Left;
-                    else
-                        return InputDirection.Bottom;
+                    return checkSwipeDirection(touch.position);
                 }
             }
         }
+#else
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (state == State.SwipeNotStarted)
+            {
+                state = State.SwipeStarted;
+                timeSwipeStarted = DateTime.Now;
+                startPoint = Input.mousePosition;
+            }
+        }
+        else if (Input.GetMouseButtonUp(0))
+        {
+            if (state == State.SwipeStarted)
+            {
+                state = State.SwipeNotStarted;
+                return checkSwipeDirection(Input.mousePosition);
+            }
+        }
+#endif
         return null;
+    }
+
+    private InputDirection? checkSwipeDirection(Vector2 mousePosition)
+    {
+        TimeSpan timeDifference = DateTime.Now - timeSwipeStarted;
+        if (timeDifference > maxSwipeDuration || timeDifference < minSwipeDuration)
+        {
+            return null;
+        }
+        Vector2 differenceVector = mousePosition - startPoint;
+        float angle = Vector2.Angle(differenceVector, Vector2.right);
+        Vector3 cross = Vector3.Cross(differenceVector, Vector2.right);
+
+        if (cross.z > 0)
+            angle = 360 - angle;
+
+        if ((angle >= 315 && angle < 360) || (angle >= 0 && angle <= 45))
+            return InputDirection.Right;
+        else if (angle > 45 && angle <= 135)
+            return InputDirection.Top;
+        else if (angle > 135 && angle <= 225)
+            return InputDirection.Left;
+        else
+            return InputDirection.Bottom;
+
     }
 
 }

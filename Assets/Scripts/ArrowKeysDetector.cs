@@ -1,7 +1,7 @@
 using Assets.Scripts;
 using UnityEngine;
 
-public class ArrowKeysDetector : MonoBehaviour, IInputDetector
+public class ArrowKeysDetector : IInputDetector
 {
     public InputDirection? DetectInputDirection()
     {
